@@ -1,0 +1,62 @@
+name: Manual Rollback
+
+on:
+  workflow_dispatch:
+    inputs:
+      task-definition-revision:
+        description: 'Task definition revision to roll back to (leave empty for previous)'
+        required: false
+        type: string
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: us-east-1
+  ECS_SERVICE: threat-event-service
+  ECS_CLUSTER: threat-event-cluster
+  TASK_FAMILY: threat-event-platform
+
+jobs:
+  rollback:
+    name: Rollback ECS Service
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::593489476440:role/threat-event-deploy-role
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Determine target revision
+        id: revision
+        run: |
+          if [ -n "${{ inputs.task-definition-revision }}" ]; then
+            echo "target=${{ env.TASK_FAMILY }}:${{ inputs.task-definition-revision }}" >> $GITHUB_OUTPUT
+          else
+            CURRENT=$(aws ecs describe-services --cluster ${{ env.ECS_CLUSTER }} --services ${{ env.ECS_SERVICE }} --query 'services[0].taskDefinition' --output text)
+            CURRENT_REV=$(echo $CURRENT | grep -o '[0-9]*$')
+            PREVIOUS_REV=$((CURRENT_REV - 1))
+            echo "target=${{ env.TASK_FAMILY }}:$PREVIOUS_REV" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Update ECS service to target revision
+        run: |
+          aws ecs update-service \
+            --cluster ${{ env.ECS_CLUSTER }} \
+            --service ${{ env.ECS_SERVICE }} \
+            --task-definition ${{ steps.revision.outputs.target }}
+
+      - name: Wait for service stability
+        run: |
+          aws ecs wait services-stable \
+            --cluster ${{ env.ECS_CLUSTER }} \
+            --services ${{ env.ECS_SERVICE }}
+
+      - name: Verify rollback
+        run: |
+          RUNNING_TD=$(aws ecs describe-services --cluster ${{ env.ECS_CLUSTER }} --services ${{ env.ECS_SERVICE }} --query 'services[0].deployments[?status==`PRIMARY`].taskDefinition' --output text)
+          echo "Service now running: $RUNNING_TD"
