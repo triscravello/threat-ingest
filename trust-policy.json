@@ -12,7 +12,7 @@
             "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
           },
           "StringLike": {
-            "token.actions.githubusercontent.com:sub": "repo:[[GITHUB_OWNER_REPO=\"your-username/your-repo-name\"]]:*"
+            "token.actions.githubusercontent.com:sub": "repo:triscravello/threat-ingest:*"
           }
         }
       }
