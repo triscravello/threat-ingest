@@ -1,0 +1,84 @@
+{
+  "containerDefinitions": [
+    {
+      "name": "threat-event-platform",
+      "image": "593489476440.dkr.ecr.us-east-1.amazonaws.com/threat-event-platform:latest",
+      "cpu": 0,
+      "portMappings": [
+        {
+          "containerPort": 8080,
+          "hostPort": 8080,
+          "protocol": "tcp"
+        }
+      ],
+      "essential": true,
+      "environment": [
+        {
+          "name": "KAFKA_BOOTSTRAP_SERVERS",
+          "value": ""
+        },
+        {
+          "name": "ELASTICSEARCH_HOST",
+          "value": ""
+        },
+        {
+          "name": "DB_USERNAME",
+          "value": "threat_app"
+        },
+        {
+          "name": "DB_PORT",
+          "value": "5432"
+        },
+        {
+          "name": "SPRING_PROFILES_ACTIVE",
+          "value": "deploy"
+        },
+        {
+          "name": "DB_NAME",
+          "value": "threat_events"
+        },
+        {
+          "name": "DB_HOST",
+          "value": "localhost"
+        }
+      ],
+      "mountPoints": [],
+      "volumesFrom": [],
+      "secrets": [
+        {
+          "name": "DB_PASSWORD",
+          "valueFrom": "arn:aws:secretsmanager:us-east-1:593489476440:secret:threat-event-platform/db-password"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/threat-event-platform",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "ecs"
+        }
+      },
+      "healthCheck": {
+        "command": [
+          "CMD-SHELL",
+          "wget --quiet --tries=1 --spider http://localhost:8080/actuator/health || exit 1"
+        ],
+        "interval": 15,
+        "timeout": 5,
+        "retries": 3,
+        "startPeriod": 30
+      },
+      "systemControls": []
+    }
+  ],
+  "family": "threat-event-platform",
+  "executionRoleArn": "arn:aws:iam::593489476440:role/ecsTaskExecutionRole",
+  "networkMode": "awsvpc",
+  "volumes": [],
+  "placementConstraints": [],
+  "requiresCompatibilities": [
+    "FARGATE"
+  ],
+  "cpu": "512",
+  "memory": "1024"
+}

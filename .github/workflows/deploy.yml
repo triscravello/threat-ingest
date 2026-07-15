@@ -13,7 +13,7 @@ env:
   ECR_REPOSITORY: threat-event-platform
   ECS_SERVICE: threat-event-service
   ECS_CLUSTER: threat-event-cluster
-  ECS_TASK_DEFINITION: .aws/task-definition.json
+  ECS_TASK_DEFINITION: ecs/task-definition.json
   CONTAINER_NAME: threat-event-platform
 
 jobs:
