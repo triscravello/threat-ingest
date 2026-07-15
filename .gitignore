@@ -31,3 +31,9 @@ build/
 
 ### VS Code ###
 .vscode/
+
+.aws/
+.DS_Store
+*.log
+target/
+.env
