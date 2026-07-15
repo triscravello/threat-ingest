@@ -1,0 +1,69 @@
+# =============================================================================
+# PORTFOLIO DEPLOYMENT PROFILE (application-deploy.yml)
+# =============================================================================
+# This profile is a TEMPORARY standalone configuration for demonstrating the
+# CI/CD pipeline and ECS deployment without provisioning managed backing services.
+#
+# It is NOT a production architecture. A real production deployment would:
+# - Use application-prod.yml with live Amazon RDS, MSK, and OpenSearch endpoints
+# - Enable all health indicators (db, elasticsearch, kafka) so /actuator/health
+#   reflects true dependency status and ALB can drain unhealthy tasks
+# - Run multiple tasks across AZs with auto-scaling
+# - Use private subnets with NAT gateways and VPC endpoints
+#
+# What this profile does:
+# - Starts the JVM and Spring context without requiring any external service
+# - Reports /actuator/health as UP (application health only, not dependency health)
+# - Serves OpenAPI/Swagger documentation for API reference
+# - Returns 503 on endpoints that require backing services (event ingestion, search)
+# =============================================================================
+
+spring:
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration
+      - org.springframework.boot.autoconfigure.elasticsearch.ElasticsearchClientAutoConfiguration
+      - org.springframework.boot.autoconfigure.elasticsearch.ElasticsearchRestClientAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.elasticsearch.ElasticsearchDataAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.elasticsearch.ElasticsearchRepositoriesAutoConfiguration
+  kafka:
+    listener:
+      auto-startup: false
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:threat_events}
+    username: ${DB_USERNAME:threat_app}
+    password: ${DB_PASSWORD:}
+    hikari:
+      initialization-fail-timeout: -1
+      maximum-pool-size: 5
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: none
+    open-in-view: false
+    properties:
+      hibernate:
+        boot:
+          allow_jdbc_metadata_access: false
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: when-authorized
+      probes:
+        enabled: true
+  health:
+    db:
+      enabled: false
+    elasticsearch:
+      enabled: false
+
+server:
+  port: 8080
+
+logging:
+  pattern:
+    console: '{"timestamp":"%d{ISO8601}","level":"%p","logger":"%logger","message":"%m"}%n'
