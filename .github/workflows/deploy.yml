@@ -38,6 +38,27 @@ jobs:
           mvn test -B
           -Dtest='!ThreatPipelineIntegrationTest,!ThreatSearchIntegrationTest,!ThreatSearchIntegrationTest*'
 
+      - name: Inspect GitHub OIDC claims
+        shell: bash
+        run: |
+          RESPONSE=$(curl -sS \
+            -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=sts.amazonaws.com")
+
+          TOKEN=$(echo "$RESPONSE" | jq -r '.value')
+          PAYLOAD=$(echo "$TOKEN" | cut -d '.' -f 2)
+
+          # Restore base64 padding.
+          case $((${#PAYLOAD} % 4)) in
+            2) PAYLOAD="${PAYLOAD}==" ;;
+            3) PAYLOAD="${PAYLOAD}=" ;;
+          esac
+
+          echo "$PAYLOAD" \
+            | tr '_-' '/+' \
+            | base64 --decode \
+            | jq '{aud, sub, repository, environment, ref, job_workflow_ref}'
+      
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
