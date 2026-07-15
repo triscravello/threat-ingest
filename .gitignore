@@ -37,3 +37,5 @@ build/
 *.log
 target/
 .env
+
+threatdb-backup.sql
